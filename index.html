@@ -5,23 +5,62 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Weather App</title>
+    <title>SkyCast | Premium Weather</title>
     <link rel="stylesheet" href="weather.css" />
 </head>
 
 <body>
-    <div class="container">
-        <h1>Weather App</h1>
-        <form>
-            <input type="text" id="city-input" placeholder="Enter City" />
-            <input type="submit" value="Get Weather" />
-        </form>
-        <div id="weather-data">
-            <div class="icon"></div>
-            <div class="temperature"></div>
-            <div class="description">Enter a city to see the weather</div>
-            <div class="details"></div>
+    <div class="app-wrapper">
+        <div class="search-section">
+            <form>
+                <input type="text" id="city-input" placeholder="Search city..." autocomplete="off" />
+                <button type="submit" id="search-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
+            </form>
         </div>
+
+        <main id="weather-data">
+            <div class="main-card">
+                <div class="current-weather">
+                    <div class="weather-header">
+                        <h2 id="city-name">SkyCast</h2>
+                        <p id="date-now">Ready to explore?</p>
+                    </div>
+                    <div class="temp-container">
+                        <div class="icon"></div>
+                        <div class="temp-wrapper">
+                            <span class="temperature">--</span>
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+                    <div class="description">Enter a city to get started</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Feels Like</span>
+                        <span class="stat-value" id="feels-like">--</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Humidity</span>
+                        <span class="stat-value" id="humidity">--</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Wind Speed</span>
+                        <span class="stat-value" id="wind-speed">--</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Visibility</span>
+                        <span class="stat-value" id="visibility">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="forecast-section" id="forecast-container">
+                <!-- Forecast items will be injected here -->
+            </div>
+        </main>
     </div>
     <script src="weather.js"></script>
 </body>
