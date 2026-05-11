@@ -1,6 +1,13 @@
 const weatherDataEl = document.getElementById("weather-data");
 const cityInputEl = document.getElementById("city-input");
 const formEl = document.querySelector("form");
+const forecastContainer = document.getElementById("forecast-container");
+
+// Initialize on load
+document.addEventListener("DOMContentLoaded", () => {
+    // Optionally pre-load a default city
+    getWeatherData("London");
+});
 
 formEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -14,11 +21,10 @@ async function getWeatherData(cityValue) {
     weatherDataEl.style.opacity = "0.5";
     
     try {
-        // Step 1: Geocoding (Get lat/lon from city name)
+        // Step 1: Geocoding
         const geoResponse = await fetch(
             `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityValue)}&count=1&language=en&format=json`
         );
-        
         const geoData = await geoResponse.json();
         
         if (!geoData.results || geoData.results.length === 0) {
@@ -27,64 +33,70 @@ async function getWeatherData(cityValue) {
         
         const { latitude, longitude, name, country } = geoData.results[0];
 
-        // Step 2: Get Weather Data
+        // Step 2: Get Current Weather & Forecast
         const weatherResponse = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
         );
 
-        if (!weatherResponse.ok) {
-            throw new Error("Weather data unavailable");
-        }
+        if (!weatherResponse.ok) throw new Error("Weather data unavailable");
 
         const data = await weatherResponse.json();
-        const current = data.current;
-
-        const temperature = Math.round(current.temperature_2m);
-        const feelsLike = Math.round(current.apparent_temperature);
-        const humidity = current.relative_humidity_2m;
-        const windSpeed = current.wind_speed_10m;
-        const weatherCode = current.weather_code;
-
-        // Map WMO Weather Codes to icons and descriptions
-        const weatherInfo = getWeatherInfo(weatherCode);
-
-        // Update main weather info
-        weatherDataEl.querySelector(".icon").innerHTML = `
-            <img src="${weatherInfo.icon}" alt="Weather Icon">
-        `;
-        weatherDataEl.querySelector(".temperature").textContent = `${temperature}°C`;
-        weatherDataEl.querySelector(".description").textContent = `${weatherInfo.description} in ${name}, ${country}`;
-
-        // Update details grid
-        weatherDataEl.querySelector(".details").innerHTML = `
-            <div class="detail-item">
-                <span class="label">Feels Like</span>
-                <span class="value">${feelsLike}°C</span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Humidity</span>
-                <span class="value">${humidity}%</span>
-            </div>
-            <div class="detail-item">
-                <span class="label">Wind</span>
-                <span class="value">${windSpeed} km/h</span>
-            </div>
-        `;
-        
-        weatherDataEl.style.opacity = "1";
+        updateUI(data, name, country);
         
     } catch (error) {
+        handleError(error);
+    } finally {
         weatherDataEl.style.opacity = "1";
-        weatherDataEl.querySelector(".icon").innerHTML = "";
-        weatherDataEl.querySelector(".temperature").textContent = "";
-        weatherDataEl.querySelector(".description").textContent = 
-            error.message === "City not found" ? "City not found. Try another!" : "Something went wrong...";
-        weatherDataEl.querySelector(".details").innerHTML = "";
     }
 }
 
+function updateUI(data, cityName, country) {
+    const current = data.current;
+    const daily = data.daily;
+
+    // Update Main Info
+    document.getElementById("city-name").textContent = `${cityName}, ${country}`;
+    document.getElementById("date-now").textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+    
+    const weatherInfo = getWeatherInfo(current.weather_code);
+    weatherDataEl.querySelector(".icon").innerHTML = `<img src="${weatherInfo.icon}" alt="Weather Icon">`;
+    weatherDataEl.querySelector(".temperature").textContent = Math.round(current.temperature_2m);
+    weatherDataEl.querySelector(".description").textContent = weatherInfo.description;
+
+    // Update Stats
+    document.getElementById("feels-like").textContent = `${Math.round(current.apparent_temperature)}°C`;
+    document.getElementById("humidity").textContent = `${current.relative_humidity_2m}%`;
+    document.getElementById("wind-speed").textContent = `${current.wind_speed_10m} km/h`;
+    document.getElementById("visibility").textContent = "High"; // Open-Meteo current doesn't always have visibility easily without extra params
+
+    // Update Forecast
+    forecastContainer.innerHTML = daily.time.map((date, index) => {
+        if (index === 0) return ''; // Skip today in forecast list
+        const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+        const dayInfo = getWeatherInfo(daily.weather_code[index]);
+        return `
+            <div class="forecast-item">
+                <span class="forecast-day">${dayName}</span>
+                <div class="forecast-icon"><img src="${dayInfo.icon}" alt="icon"></div>
+                <div class="forecast-temp">
+                    <span class="temp-max">${Math.round(daily.temperature_2m_max[index])}°</span>
+                    <span class="temp-min">${Math.round(daily.temperature_2m_min[index])}°</span>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function handleError(error) {
+    document.getElementById("city-name").textContent = "Error";
+    document.getElementById("date-now").textContent = error.message;
+    weatherDataEl.querySelector(".icon").innerHTML = "";
+    weatherDataEl.querySelector(".temperature").textContent = "--";
+    weatherDataEl.querySelector(".description").textContent = "Please try searching again.";
+    forecastContainer.innerHTML = "";
+}
+
 function getWeatherInfo(code) {
-    // Mapping WMO codes to descriptions and OpenWeatherMap-style icons (using a fallback icon set)
     const mapping = {
         0: { description: "Clear sky", icon: "01d" },
         1: { description: "Mainly clear", icon: "02d" },
