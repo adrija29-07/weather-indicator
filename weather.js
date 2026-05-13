@@ -18,36 +18,40 @@ formEl.addEventListener("submit", (event) => {
 });
 
 async function getWeatherData(cityValue) {
-    weatherDataEl.style.opacity = "0.5";
+    weatherDataEl.style.transform = "translateY(10px)";
+    weatherDataEl.style.opacity = "0";
     
-    try {
-        // Step 1: Geocoding
-        const geoResponse = await fetch(
-            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityValue)}&count=1&language=en&format=json`
-        );
-        const geoData = await geoResponse.json();
-        
-        if (!geoData.results || geoData.results.length === 0) {
-            throw new Error("City not found");
+    setTimeout(async () => {
+        try {
+            // Step 1: Geocoding
+            const geoResponse = await fetch(
+                `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityValue)}&count=1&language=en&format=json`
+            );
+            const geoData = await geoResponse.json();
+            
+            if (!geoData.results || geoData.results.length === 0) {
+                throw new Error("City not found");
+            }
+            
+            const { latitude, longitude, name, country } = geoData.results[0];
+    
+            // Step 2: Get Current Weather & Forecast
+            const weatherResponse = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
+            );
+    
+            if (!weatherResponse.ok) throw new Error("Weather data unavailable");
+    
+            const data = await weatherResponse.json();
+            updateUI(data, name, country);
+            
+        } catch (error) {
+            handleError(error);
+        } finally {
+            weatherDataEl.style.transform = "translateY(0)";
+            weatherDataEl.style.opacity = "1";
         }
-        
-        const { latitude, longitude, name, country } = geoData.results[0];
-
-        // Step 2: Get Current Weather & Forecast
-        const weatherResponse = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
-        );
-
-        if (!weatherResponse.ok) throw new Error("Weather data unavailable");
-
-        const data = await weatherResponse.json();
-        updateUI(data, name, country);
-        
-    } catch (error) {
-        handleError(error);
-    } finally {
-        weatherDataEl.style.opacity = "1";
-    }
+    }, 400);
 }
 
 function updateUI(data, cityName, country) {
@@ -74,13 +78,14 @@ function updateUI(data, cityName, country) {
     document.getElementById("wind-speed").textContent = `${current.wind_speed_10m} km/h`;
     document.getElementById("visibility").textContent = "High";
 
-    // Update Forecast
+    // Update Forecast with staggered animation
     forecastContainer.innerHTML = daily.time.map((date, index) => {
         if (index === 0) return ''; // Skip today in forecast list
         const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
         const dayInfo = getWeatherInfo(daily.weather_code[index]);
+        const delay = index * 0.1;
         return `
-            <div class="forecast-item">
+            <div class="forecast-item" style="animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards ${delay}s; opacity: 0;">
                 <span class="forecast-day">${dayName}</span>
                 <div class="forecast-icon"><img src="${dayInfo.icon}" alt="icon"></div>
                 <div class="forecast-temp">
@@ -115,11 +120,11 @@ function updateBackground(temp, code) {
 }
 
 function handleError(error) {
-    document.getElementById("city-name").textContent = "Error";
-    document.getElementById("date-now").textContent = error.message;
-    weatherDataEl.querySelector(".icon").innerHTML = "";
+    document.getElementById("city-name").textContent = "Oops!";
+    document.getElementById("date-now").textContent = error.message === "City not found" ? "We couldn't find that city." : "Something went wrong.";
+    weatherDataEl.querySelector(".icon").innerHTML = `<div style="font-size: 5rem; opacity: 0.5;">📍</div>`;
     weatherDataEl.querySelector(".temperature").textContent = "--";
-    weatherDataEl.querySelector(".description").textContent = "Please try searching again.";
+    weatherDataEl.querySelector(".description").textContent = "Please check the spelling and try again.";
     forecastContainer.innerHTML = "";
 }
 
