@@ -53,21 +53,26 @@ async function getWeatherData(cityValue) {
 function updateUI(data, cityName, country) {
     const current = data.current;
     const daily = data.daily;
+    const temp = Math.round(current.temperature_2m);
+    const code = current.weather_code;
+
+    // Update Background based on conditions
+    updateBackground(temp, code);
 
     // Update Main Info
     document.getElementById("city-name").textContent = `${cityName}, ${country}`;
     document.getElementById("date-now").textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     
-    const weatherInfo = getWeatherInfo(current.weather_code);
+    const weatherInfo = getWeatherInfo(code);
     weatherDataEl.querySelector(".icon").innerHTML = `<img src="${weatherInfo.icon}" alt="Weather Icon">`;
-    weatherDataEl.querySelector(".temperature").textContent = Math.round(current.temperature_2m);
+    weatherDataEl.querySelector(".temperature").textContent = temp;
     weatherDataEl.querySelector(".description").textContent = weatherInfo.description;
 
     // Update Stats
     document.getElementById("feels-like").textContent = `${Math.round(current.apparent_temperature)}°C`;
     document.getElementById("humidity").textContent = `${current.relative_humidity_2m}%`;
     document.getElementById("wind-speed").textContent = `${current.wind_speed_10m} km/h`;
-    document.getElementById("visibility").textContent = "High"; // Open-Meteo current doesn't always have visibility easily without extra params
+    document.getElementById("visibility").textContent = "High";
 
     // Update Forecast
     forecastContainer.innerHTML = daily.time.map((date, index) => {
@@ -85,6 +90,28 @@ function updateUI(data, cityName, country) {
             </div>
         `;
     }).join("");
+}
+
+function updateBackground(temp, code) {
+    const body = document.body;
+    let bgUrl = 'https://images.unsplash.com/photo-1534088568595-a066f710b81f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80'; // Default
+    
+    // Rainy/Drizzle codes from Open-Meteo
+    const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+    const isRainy = rainCodes.includes(code);
+
+    if (isRainy) {
+        // Moody rainy background
+        bgUrl = 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=1920&q=80';
+    } else if (temp >= 30) {
+        // Bright sunny background
+        bgUrl = 'https://images.unsplash.com/photo-1504370805625-d32c54b16100?auto=format&fit=crop&w=1920&q=80';
+    } else if (temp < 20) {
+        // Cozy cold background
+        bgUrl = 'https://images.unsplash.com/photo-1477601263568-180e2c6d046e?auto=format&fit=crop&w=1920&q=80';
+    }
+
+    body.style.setProperty('--bg-image', `url('${bgUrl}')`);
 }
 
 function handleError(error) {
@@ -107,13 +134,22 @@ function getWeatherInfo(code) {
         51: { description: "Light drizzle", icon: "09d" },
         53: { description: "Moderate drizzle", icon: "09d" },
         55: { description: "Dense drizzle", icon: "09d" },
+        56: { description: "Freezing drizzle", icon: "09d" },
+        57: { description: "Dense freezing drizzle", icon: "09d" },
         61: { description: "Slight rain", icon: "10d" },
         63: { description: "Moderate rain", icon: "10d" },
         65: { description: "Heavy rain", icon: "10d" },
+        66: { description: "Light freezing rain", icon: "10d" },
+        67: { description: "Heavy freezing rain", icon: "10d" },
         71: { description: "Slight snow fall", icon: "13d" },
         73: { description: "Moderate snow fall", icon: "13d" },
         75: { description: "Heavy snow fall", icon: "13d" },
+        80: { description: "Slight rain showers", icon: "09d" },
+        81: { description: "Moderate rain showers", icon: "09d" },
+        82: { description: "Violent rain showers", icon: "09d" },
         95: { description: "Thunderstorm", icon: "11d" },
+        96: { description: "Thunderstorm with hail", icon: "11d" },
+        99: { description: "Heavy thunderstorm with hail", icon: "11d" },
     };
 
     const res = mapping[code] || { description: "Unknown", icon: "01d" };
