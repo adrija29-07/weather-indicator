@@ -2,10 +2,11 @@ const weatherDataEl = document.getElementById("weather-data");
 const cityInputEl = document.getElementById("city-input");
 const formEl = document.querySelector("form");
 const forecastContainer = document.getElementById("forecast-container");
+const locationBtn = document.getElementById("location-btn");
+const hourlyContainer = document.getElementById("hourly-container");
 
 // Initialize on load
 document.addEventListener("DOMContentLoaded", () => {
-    // Optionally pre-load a default city
     getWeatherData("London");
 });
 
@@ -17,33 +18,65 @@ formEl.addEventListener("submit", (event) => {
     }
 });
 
+locationBtn.addEventListener("click", () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            getWeatherDataByCoords(latitude, longitude);
+        }, () => {
+            alert("Unable to retrieve your location. Please search manually.");
+        });
+    } else {
+        alert("Geolocation is not supported by your browser.");
+    }
+});
+
+async function getWeatherDataByCoords(lat, lon) {
+    try {
+        // Reverse Geocoding to get city name
+        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        const geoData = await geoResponse.json();
+        const cityName = geoData.address.city || geoData.address.town || geoData.address.village || "Current Location";
+        const country = geoData.address.country;
+        
+        fetchFullWeather(lat, lon, cityName, country);
+    } catch (error) {
+        fetchFullWeather(lat, lon, "Your Location", "");
+    }
+}
+
 async function getWeatherData(cityValue) {
+    try {
+        const geoResponse = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityValue)}&count=1&language=en&format=json`
+        );
+        const geoData = await geoResponse.json();
+        
+        if (!geoData.results || geoData.results.length === 0) {
+            throw new Error("City not found");
+        }
+        
+        const { latitude, longitude, name, country } = geoData.results[0];
+        fetchFullWeather(latitude, longitude, name, country);
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+async function fetchFullWeather(lat, lon, cityName, country) {
     weatherDataEl.style.transform = "translateY(10px)";
     weatherDataEl.style.opacity = "0";
     
     setTimeout(async () => {
         try {
-            // Step 1: Geocoding
-            const geoResponse = await fetch(
-                `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityValue)}&count=1&language=en&format=json`
-            );
-            const geoData = await geoResponse.json();
-            
-            if (!geoData.results || geoData.results.length === 0) {
-                throw new Error("City not found");
-            }
-            
-            const { latitude, longitude, name, country } = geoData.results[0];
-    
-            // Step 2: Get Current Weather & Forecast
             const weatherResponse = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max&hourly=temperature_2m,weather_code&timezone=auto`
             );
     
             if (!weatherResponse.ok) throw new Error("Weather data unavailable");
     
             const data = await weatherResponse.json();
-            updateUI(data, name, country);
+            updateUI(data, cityName, country);
             
         } catch (error) {
             handleError(error);
@@ -76,7 +109,23 @@ function updateUI(data, cityName, country) {
     document.getElementById("feels-like").textContent = `${Math.round(current.apparent_temperature)}°C`;
     document.getElementById("humidity").textContent = `${current.relative_humidity_2m}%`;
     document.getElementById("wind-speed").textContent = `${current.wind_speed_10m} km/h`;
-    document.getElementById("visibility").textContent = "High";
+    document.getElementById("uv-index").textContent = data.daily.uv_index_max[0];
+
+    // Update Hourly Forecast
+    const hourly = data.hourly;
+    const currentHour = new Date().getHours();
+    hourlyContainer.innerHTML = hourly.time.slice(currentHour, currentHour + 24).map((time, index) => {
+        const hour = new Date(time).getHours();
+        const displayHour = hour === 0 ? "12 AM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
+        const hourInfo = getWeatherInfo(hourly.weather_code[currentHour + index]);
+        return `
+            <div class="hourly-item">
+                <span class="hourly-time">${displayHour}</span>
+                <div class="hourly-icon"><img src="${hourInfo.icon}" alt="icon"></div>
+                <span class="hourly-temp">${Math.round(hourly.temperature_2m[currentHour + index])}°</span>
+            </div>
+        `;
+    }).join("");
 
     // Update Forecast with staggered animation
     forecastContainer.innerHTML = daily.time.map((date, index) => {

@@ -129,6 +129,23 @@ body::after {
     opacity: 0.7;
 }
 
+#location-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    margin-right: 15px;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#location-btn:hover {
+    color: var(--primary);
+    transform: scale(1.2);
+}
+
 #search-btn {
     background: linear-gradient(135deg, var(--primary), var(--accent));
     border: none;
@@ -259,11 +276,11 @@ main {
 .stat-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--glass-border);
-    padding: 24px;
+    padding: 20px 24px;
     border-radius: 24px;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    align-items: center;
+    gap: 16px;
     transition: var(--transition);
 }
 
@@ -271,10 +288,28 @@ main {
     background: rgba(255, 255, 255, 0.06);
     transform: translateY(-8px) scale(1.02);
     border-color: var(--primary);
+    box-shadow: 0 10px 30px -10px var(--primary-glow);
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+    background: var(--glass-heavy);
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .stat-label {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: var(--text-dim);
@@ -282,7 +317,70 @@ main {
 }
 
 .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+/* Hourly Section */
+.hourly-section {
+    margin-top: 40px;
+}
+
+.hourly-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hourly-container {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    scrollbar-width: none; /* Firefox */
+}
+
+.hourly-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.hourly-item {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid var(--glass-border);
+    padding: 24px 18px;
+    border-radius: 28px;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: var(--transition);
+}
+
+.hourly-item:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    transform: translateY(-8px) scale(1.05);
+    border-color: var(--primary);
+    box-shadow: 0 10px 25px -10px var(--primary-glow);
+}
+
+.hourly-time {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.hourly-icon img {
+    width: 40px;
+    height: 40px;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+}
+
+.hourly-temp {
+    font-size: 1.1rem;
     font-weight: 700;
 }
 
